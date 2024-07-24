@@ -11,26 +11,25 @@ const { width, height } = {
   height: window.innerHeight - 200
 }
 
+type CollisionDirection = 'left' | 'right' | 'top' | 'bottom' | 'none'
+
 type Object = {
-  x: number
-  y: number
+  x: number,
+  y: number,
+  width: number,
+  height: number,
   draw: (ctx: CanvasRenderingContext2D) => void
 }
 
-type Player = {
-  width: number
-  height: number
+type Player = Object & {
   dx: number
   dy: number
   jumping: boolean
   jumpDirection: number
   onPlatform: boolean
-} & Object
+}
 
-type Platform = {
-  width: number
-  height: number
-} & Object
+type Platform = Object
 
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
 
@@ -130,16 +129,7 @@ const handleKeyUp = (e: KeyboardEvent) => {
   }
 }
 
-type Rect = {
-  x: number
-  y: number
-  width: number
-  height: number
-}
-
-type CollisionDirection = 'left' | 'right' | 'top' | 'bottom' | 'none'
-
-const checkCollisions = <T extends Rect, U extends Rect>(a: T, b: U): { isColliding: boolean, direction: CollisionDirection } => {
+const checkCollisions = <T extends Object, U extends Object>(a: T, b: U): { isColliding: boolean, direction: CollisionDirection } => {
   const isColliding = (
     a.x < b.x + b.width &&
     a.x + a.width > b.x &&
@@ -148,16 +138,6 @@ const checkCollisions = <T extends Rect, U extends Rect>(a: T, b: U): { isCollid
   )
 
   let direction: CollisionDirection = 'none'
-
-  // if (a.x < 0) {
-  //   direction = 'left';
-  // } else if (a.x + a.width > width) {
-  //   direction = 'right';
-  // } else if (a.y < 0) {
-  //   direction = 'top';
-  // } else if (a.y + a.height > height) {
-  //   direction = 'bottom';
-  // }
 
   if (isColliding) {
     const aCenterX = a.x + a.width / 2
@@ -187,11 +167,11 @@ const update = (ctx: CanvasRenderingContext2D) => {
   player.value.dy += gravity
   
   if (!player.value.jumping && !keyStates[' ']) {
-    if (keyStates['ArrowLeft']) {
+    if (keyStates['ArrowLeft'] && player.value.onPlatform) {
       player.value.dx = -moveSpeed
-    } else if (keyStates['ArrowRight']) {
+    } else if (keyStates['ArrowRight'] && player.value.onPlatform) {
       player.value.dx = moveSpeed
-    } else {
+    } else if (player.value.onPlatform) {
       player.value.dx = 0
     }
   }
@@ -206,48 +186,33 @@ const update = (ctx: CanvasRenderingContext2D) => {
   
   player.value.onPlatform = false
   platforms.forEach((platform) => {
-  const { isColliding, direction } = checkCollisions(player.value, platform);
+  const { isColliding, direction } = checkCollisions(player.value, platform)
 
   if (isColliding) {
     switch (direction) {
       case 'left':
-        // Move player to the right edge of the platform and invert horizontal velocity
-        player.value.x = Math.max(platform.x + platform.width, player.value.x);
+        player.value.x = Math.max(platform.x + platform.width, player.value.x)
         player.value.jumpDirection *= -1
-        break;
+        break
       case 'right':
-        // Move player to the left edge of the platform and invert horizontal velocity
-        player.value.x = Math.min(platform.x - player.value.width, player.value.x);
+        player.value.x = Math.min(platform.x - player.value.width, player.value.x)
         player.value.jumpDirection *= -1
 
-        break;
+        break
       case 'top':
-        // Move player to the bottom edge of the platform and reset vertical velocity
-        player.value.y = Math.max(platform.y + platform.height, player.value.y);
-        player.value.dy = 0;
-        player.value.jumping = false;
-        player.value.onPlatform = true;
-        break;
-      case 'bottom':
-        // Move player to the top edge of the platform and reset vertical velocity
-        player.value.y = platform.y - player.value.height;
+        player.value.y = Math.max(platform.y + platform.height, player.value.y)
         player.value.dy = 0
-        player.value.jumping = false;
-        player.value.onPlatform = true;
-        break;
+        player.value.jumping = false
+        break
+      case 'bottom':
+        player.value.y = platform.y - player.value.height
+        player.value.dy = 0
+        player.value.jumping = false
+        player.value.onPlatform = true
+        break
     }
   }
-});
-
-
-
-  // if (player.value.y + player.value.height > 600) {
-  //   player.value.y = 600 - player.value.height
-  //   player.value.dy = 0
-  //   player.value.jumping = false
-  //   player.value.onPlatform = true 
-  //   player.value.dx = 0 
-  // }
+})
 
   ctx.clearRect(0, 0, width, height)
 
