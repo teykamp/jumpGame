@@ -1,7 +1,7 @@
 <template>
  <div style="display: flex;">
    <canvas ref="gameCanvas" :width="width" :height="height"></canvas>
-   {{ player }}
+   {{ player }} {{ height - player.height }}
  </div>
 </template>
 
@@ -9,11 +9,11 @@
 import { ref, onMounted } from 'vue'
 
 const { width, height } = {
-  width: window.innerWidth - 200,
-  height: window.innerHeight - 20
+  width: 800,
+  height: 800
 }
 
-const scale = Math.min(width / 800, height / 600) // Uniform scaling factor
+const scale = Math.max(Math.min(width / 1920, height / 1080), 0.75)
 
 type CollisionDirection = 'left' | 'right' | 'top' | 'bottom' | 'none'
 
@@ -66,7 +66,7 @@ const platforms: Platform[] = [
   },
   { 
     x: 100, 
-    y: 400, 
+    y: 500, 
     width: 200, 
     height: 200, 
     draw: (ctx: CanvasRenderingContext2D) => {
@@ -76,7 +76,7 @@ const platforms: Platform[] = [
   },
   { 
     x: 500, 
-    y: 300, 
+    y: 500, 
     width: 200, 
     height: 20, 
     draw: (ctx: CanvasRenderingContext2D) => {
@@ -86,22 +86,43 @@ const platforms: Platform[] = [
   },
   { 
     x: 0, 
-    y: height - 5, 
-    width: width, 
-    height: 5 , 
+    y: height / scale - 5, 
+    width: width / scale, 
+    height: 25 , 
     draw: (ctx: CanvasRenderingContext2D) => {
-      ctx.fillStyle = 'rgb(0, 0, 0, 1)'
-      ctx.fillRect(platforms[3].x, platforms[3].y, platforms[3].width, platforms[3].height)
+      ctx.fillStyle = 'rgb(0, 200, 255, 1)'
+      ctx.fillRect(platforms[3].x * scale, platforms[3].y * scale, platforms[3].width * scale, platforms[3].height * scale)
     }
   },
   { 
-    x: 0, 
+    x: -20, 
     y: 0, 
-    width: 5, 
-    height: height, 
+    width: 25, 
+    height: height / scale, 
     draw: (ctx: CanvasRenderingContext2D) => {
-      ctx.fillStyle = 'rgb(0, 0, 0, 1)'
-      ctx.fillRect(platforms[4].x, platforms[4].y, platforms[4].width, platforms[4].height)
+      ctx.fillStyle = 'rgb(200, 0, 255, 1)'
+      ctx.fillRect(platforms[4].x * scale, platforms[4].y * scale, platforms[4].width * scale, platforms[4].height * scale)
+    }
+  },
+  { 
+    x: width / scale - 5, 
+    y: 0, 
+    width: 25, 
+    height: height / scale, 
+    draw: (ctx: CanvasRenderingContext2D) => {
+      ctx.fillStyle = 'rgb(0, 0, 255, 1)'
+      ctx.fillRect(platforms[5].x * scale, platforms[5].y * scale, platforms[5].width * scale, platforms[5].height * scale)
+    }
+  },
+  { 
+    // bottom
+    x: 0, 
+    y: -245, 
+    width: width / scale, 
+    height: 250, 
+    draw: (ctx: CanvasRenderingContext2D) => {
+      ctx.fillStyle = 'rgb(0, 0, 100, 1)'
+      ctx.fillRect(platforms[6].x * scale, platforms[6].y * scale, platforms[6].width * scale, platforms[6].height * scale)
     }
   },
 ]
@@ -150,22 +171,22 @@ const checkCollisions = <T extends Object, U extends Object>(a: T, b: U): { isCo
   let direction: CollisionDirection = 'none'
 
   if (isColliding) {
-    const aCenterX = a.x + a.width / 2
-    const aCenterY = a.y + a.height / 2
-    const bCenterX = b.x + b.width / 2
-    const bCenterY = b.y + b.height / 2
+  const aCenterX = a.x + a.width / 2;
+  const aCenterY = a.y + a.height / 2;
+  const bCenterX = b.x + b.width / 2;
+  const bCenterY = b.y + b.height / 2;
 
-    const dx = aCenterX - bCenterX
-    const dy = aCenterY - bCenterY
-    const overlapX = (a.width / 2 + b.width / 2) - Math.abs(dx)
-    const overlapY = (a.height / 2 + b.height / 2) - Math.abs(dy)
+  const dx = aCenterX - bCenterX;
+  const dy = aCenterY - bCenterY;
+  const overlapX = (a.width / 2 + b.width / 2) - Math.abs(dx);
+  const overlapY = (a.height / 2 + b.height / 2) - Math.abs(dy);
 
-    if (overlapX < overlapY) {
-      direction = dx > 0 ? 'left' : 'right'
-    } else {
-      direction = dy > 0 ? 'top' : 'bottom'
-    }
+  if (overlapX < overlapY) {
+    direction = dx > 0 ? 'left' : 'right';
+  } else {
+    direction = dy > 0 ? 'top' : 'bottom';
   }
+}
 
   return { isColliding, direction }
 }
