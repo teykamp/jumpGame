@@ -1,14 +1,23 @@
 <template>
-  <canvas ref="gameCanvas" width="800" height="600"></canvas>
-  {{ keyStates }}
+  <canvas ref="gameCanvas" :width="width" :height="height"></canvas>
+  {{ player }}
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-type Player = {
+const { width, height } = {
+  width: window.innerWidth - 400,
+  height: window.innerHeight - 200
+}
+
+type Object = {
   x: number
   y: number
+  draw: (ctx: CanvasRenderingContext2D) => void
+}
+
+type Player = {
   width: number
   height: number
   dx: number
@@ -16,16 +25,15 @@ type Player = {
   jumping: boolean
   jumpDirection: number
   onPlatform: boolean
-}
+} & Object
 
 type Platform = {
-  x: number
-  y: number
   width: number
   height: number
-}
+} & Object
 
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
+
 const player = ref<Player>({
   x: 400,
   y: 300,
@@ -36,16 +44,67 @@ const player = ref<Player>({
   jumping: false,
   jumpDirection: 0,
   onPlatform: false,
+  draw: (ctx: CanvasRenderingContext2D) => {
+    ctx.fillStyle = 'red'
+    ctx.fillRect(player.value.x, player.value.y, player.value.width, player.value.height)
+  }
 })
 
 const platforms: Platform[] = [
-  { x: 300, y: 500, width: 200, height: 20 },
-  { x: 100, y: 400, width: 200, height: 200 },
-  { x: 500, y: 300, width: 200, height: 20 },
+  { 
+    x: 300, 
+    y: 500, 
+    width: 200, 
+    height: 20 , 
+    draw: (ctx: CanvasRenderingContext2D) => {
+      ctx.fillStyle = 'green'
+      ctx.fillRect(platforms[0].x, platforms[0].y, platforms[0].width, platforms[0].height)
+    }
+  },
+  { 
+    x: 100, 
+    y: 400, 
+    width: 200, 
+    height: 200 , 
+    draw: (ctx: CanvasRenderingContext2D) => {
+      ctx.fillStyle = 'green'
+      ctx.fillRect(platforms[1].x, platforms[1].y, platforms[1].width, platforms[1].height)
+    }
+  },
+  { 
+    x: 500, 
+    y: 300, 
+    width: 200, 
+    height: 20 , 
+    draw: (ctx: CanvasRenderingContext2D) => {
+      ctx.fillStyle = 'green'
+      ctx.fillRect(platforms[2].x, platforms[2].y, platforms[2].width, platforms[2].height)
+    }
+  },
+  { 
+    x: 0, 
+    y: height - 1, 
+    width: width, 
+    height: 1 , 
+    draw: (ctx: CanvasRenderingContext2D) => {
+      ctx.fillStyle = 'green'
+      ctx.fillRect(platforms[2].x, platforms[2].y, platforms[2].width, platforms[2].height)
+    }
+  },
+  { 
+    x: 0, 
+    y: 0, 
+    width: 1, 
+    height: height, 
+    draw: (ctx: CanvasRenderingContext2D) => {
+      ctx.fillStyle = 'green'
+      ctx.fillRect(platforms[2].x, platforms[2].y, platforms[2].width, platforms[2].height)
+    }
+  },
 ]
 
 const gravity = 0.5
-const jumpStrength = -15
+const jumpStrength = ref(15 * -1)
 const moveSpeed = 5
 
 const keyStates: Record<string, boolean> = {}
@@ -66,9 +125,8 @@ const handleKeyUp = (e: KeyboardEvent) => {
     } else {
       player.value.jumpDirection = 0
     }
-    player.value.dy = jumpStrength
+    player.value.dy = jumpStrength.value
     player.value.jumping = true
-    player.value.onPlatform = false 
   }
 }
 
@@ -90,6 +148,16 @@ const checkCollisions = <T extends Rect, U extends Rect>(a: T, b: U): { isCollid
   )
 
   let direction: CollisionDirection = 'none'
+
+  // if (a.x < 0) {
+  //   direction = 'left';
+  // } else if (a.x + a.width > width) {
+  //   direction = 'right';
+  // } else if (a.y < 0) {
+  //   direction = 'top';
+  // } else if (a.y + a.height > height) {
+  //   direction = 'bottom';
+  // }
 
   if (isColliding) {
     const aCenterX = a.x + a.width / 2
@@ -117,7 +185,6 @@ const checkCollisions = <T extends Rect, U extends Rect>(a: T, b: U): { isCollid
 const update = (ctx: CanvasRenderingContext2D) => {
   
   player.value.dy += gravity
-
   
   if (!player.value.jumping && !keyStates[' ']) {
     if (keyStates['ArrowLeft']) {
@@ -146,12 +213,13 @@ const update = (ctx: CanvasRenderingContext2D) => {
       case 'left':
         // Move player to the right edge of the platform and invert horizontal velocity
         player.value.x = Math.max(platform.x + platform.width, player.value.x);
-        player.value.dx = Math.abs(player.value.dx); // Ensure velocity is positive
+        player.value.jumpDirection *= -1
         break;
       case 'right':
         // Move player to the left edge of the platform and invert horizontal velocity
         player.value.x = Math.min(platform.x - player.value.width, player.value.x);
-        player.value.dx = -Math.abs(player.value.dx); // Ensure velocity is negative
+        player.value.jumpDirection *= -1
+
         break;
       case 'top':
         // Move player to the bottom edge of the platform and reset vertical velocity
@@ -163,7 +231,7 @@ const update = (ctx: CanvasRenderingContext2D) => {
       case 'bottom':
         // Move player to the top edge of the platform and reset vertical velocity
         player.value.y = platform.y - player.value.height;
-        player.value.dy = 0;
+        player.value.dy = 0
         player.value.jumping = false;
         player.value.onPlatform = true;
         break;
@@ -173,15 +241,15 @@ const update = (ctx: CanvasRenderingContext2D) => {
 
 
 
-  if (player.value.y + player.value.height > 600) {
-    player.value.y = 600 - player.value.height
-    player.value.dy = 0
-    player.value.jumping = false
-    player.value.onPlatform = true 
-    player.value.dx = 0 
-  }
+  // if (player.value.y + player.value.height > 600) {
+  //   player.value.y = 600 - player.value.height
+  //   player.value.dy = 0
+  //   player.value.jumping = false
+  //   player.value.onPlatform = true 
+  //   player.value.dx = 0 
+  // }
 
-  ctx.clearRect(0, 0, 800, 600)
+  ctx.clearRect(0, 0, width, height)
 
   ctx.fillStyle = 'green'
   platforms.forEach((platform) => {
