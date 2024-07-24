@@ -13,6 +13,8 @@ const { width, height } = {
   height: window.innerHeight - 20
 }
 
+const scale = Math.min(width / 800, height / 600) // Uniform scaling factor
+
 type CollisionDirection = 'left' | 'right' | 'top' | 'bottom' | 'none'
 
 type Object = {
@@ -47,7 +49,7 @@ const player = ref<Player>({
   onPlatform: false,
   draw: (ctx: CanvasRenderingContext2D) => {
     ctx.fillStyle = 'red'
-    ctx.fillRect(player.value.x, player.value.y, player.value.width, player.value.height)
+    ctx.fillRect(player.value.x * scale, player.value.y * scale, player.value.width * scale, player.value.height * scale)
   }
 })
 
@@ -56,56 +58,56 @@ const platforms: Platform[] = [
     x: 300, 
     y: 500, 
     width: 200, 
-    height: 20 , 
+    height: 20, 
     draw: (ctx: CanvasRenderingContext2D) => {
       ctx.fillStyle = 'green'
-      ctx.fillRect(platforms[0].x, platforms[0].y, platforms[0].width, platforms[0].height)
+      ctx.fillRect(platforms[0].x * scale, platforms[0].y * scale, platforms[0].width * scale, platforms[0].height * scale)
     }
   },
   { 
     x: 100, 
     y: 400, 
     width: 200, 
-    height: 200 , 
+    height: 200, 
     draw: (ctx: CanvasRenderingContext2D) => {
       ctx.fillStyle = 'green'
-      ctx.fillRect(platforms[1].x, platforms[1].y, platforms[1].width, platforms[1].height)
+      ctx.fillRect(platforms[1].x * scale, platforms[1].y * scale, platforms[1].width * scale, platforms[1].height * scale)
     }
   },
   { 
     x: 500, 
     y: 300, 
     width: 200, 
-    height: 20 , 
+    height: 20, 
     draw: (ctx: CanvasRenderingContext2D) => {
       ctx.fillStyle = 'green'
-      ctx.fillRect(platforms[2].x, platforms[2].y, platforms[2].width, platforms[2].height)
+      ctx.fillRect(platforms[2].x * scale, platforms[2].y * scale, platforms[2].width * scale, platforms[2].height * scale)
     }
   },
   { 
     x: 0, 
-    y: height - 1, 
+    y: height - 5, 
     width: width, 
-    height: 1 , 
+    height: 5 , 
     draw: (ctx: CanvasRenderingContext2D) => {
-      ctx.fillStyle = 'rgb(0, 0, 0, 0)'
+      ctx.fillStyle = 'rgb(0, 0, 0, 1)'
       ctx.fillRect(platforms[3].x, platforms[3].y, platforms[3].width, platforms[3].height)
     }
   },
   { 
     x: 0, 
     y: 0, 
-    width: 1, 
+    width: 5, 
     height: height, 
     draw: (ctx: CanvasRenderingContext2D) => {
-      ctx.fillStyle = 'rgb(0, 0, 0, 0)'
+      ctx.fillStyle = 'rgb(0, 0, 0, 1)'
       ctx.fillRect(platforms[4].x, platforms[4].y, platforms[4].width, platforms[4].height)
     }
   },
 ]
 
-const gravity = 0.5
-const jumpStrength = ref(15 * -1)
+const gravity = 0.98 
+const jumpStrength = ref(20 * -1 )
 const moveSpeed = 5
 
 const keyStates: Record<string, boolean> = {}
