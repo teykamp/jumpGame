@@ -1,14 +1,16 @@
 <template>
-  <canvas ref="gameCanvas" :width="width" :height="height"></canvas>
-  {{ player }}
+ <div style="display: flex;">
+   <canvas ref="gameCanvas" :width="width" :height="height"></canvas>
+   {{ player }}
+ </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
 const { width, height } = {
-  width: window.innerWidth - 400,
-  height: window.innerHeight - 200
+  width: window.innerWidth - 200,
+  height: window.innerHeight - 20
 }
 
 type CollisionDirection = 'left' | 'right' | 'top' | 'bottom' | 'none'
@@ -86,8 +88,8 @@ const platforms: Platform[] = [
     width: width, 
     height: 1 , 
     draw: (ctx: CanvasRenderingContext2D) => {
-      ctx.fillStyle = 'green'
-      ctx.fillRect(platforms[2].x, platforms[2].y, platforms[2].width, platforms[2].height)
+      ctx.fillStyle = 'rgb(0, 0, 0, 0)'
+      ctx.fillRect(platforms[3].x, platforms[3].y, platforms[3].width, platforms[3].height)
     }
   },
   { 
@@ -96,8 +98,8 @@ const platforms: Platform[] = [
     width: 1, 
     height: height, 
     draw: (ctx: CanvasRenderingContext2D) => {
-      ctx.fillStyle = 'green'
-      ctx.fillRect(platforms[2].x, platforms[2].y, platforms[2].width, platforms[2].height)
+      ctx.fillStyle = 'rgb(0, 0, 0, 0)'
+      ctx.fillRect(platforms[4].x, platforms[4].y, platforms[4].width, platforms[4].height)
     }
   },
 ]
@@ -110,6 +112,7 @@ const keyStates: Record<string, boolean> = {}
 
 const handleKeyDown = (e: KeyboardEvent) => {
   keyStates[e.key] = true
+  if (e.key === ' ' && player.value.onPlatform) player.value.dx = 0
 }
 
 const handleKeyUp = (e: KeyboardEvent) => {
@@ -119,10 +122,15 @@ const handleKeyUp = (e: KeyboardEvent) => {
     
     if (keyStates['ArrowLeft']) {
       player.value.jumpDirection = -1
+      player.value.dx = player.value.jumpDirection * moveSpeed
+
     } else if (keyStates['ArrowRight']) {
       player.value.jumpDirection = 1
+      player.value.dx = player.value.jumpDirection * moveSpeed
+
     } else {
       player.value.jumpDirection = 0
+      
     }
     player.value.dy = jumpStrength.value
     player.value.jumping = true
@@ -176,10 +184,6 @@ const update = (ctx: CanvasRenderingContext2D) => {
     }
   }
 
-  if (player.value.jumping) {
-    player.value.dx = player.value.jumpDirection * moveSpeed
-  }
-
   player.value.x += player.value.dx
   player.value.y += player.value.dy
 
@@ -192,11 +196,11 @@ const update = (ctx: CanvasRenderingContext2D) => {
     switch (direction) {
       case 'left':
         player.value.x = Math.max(platform.x + platform.width, player.value.x)
-        player.value.jumpDirection *= -1
+        player.value.dx *= -1
         break
       case 'right':
         player.value.x = Math.min(platform.x - player.value.width, player.value.x)
-        player.value.jumpDirection *= -1
+        player.value.dx *= -1
 
         break
       case 'top':
@@ -207,6 +211,7 @@ const update = (ctx: CanvasRenderingContext2D) => {
       case 'bottom':
         player.value.y = platform.y - player.value.height
         player.value.dy = 0
+        player.value.jumpDirection = 0
         player.value.jumping = false
         player.value.onPlatform = true
         break
@@ -215,14 +220,11 @@ const update = (ctx: CanvasRenderingContext2D) => {
 })
 
   ctx.clearRect(0, 0, width, height)
-
-  ctx.fillStyle = 'green'
   platforms.forEach((platform) => {
-    ctx.fillRect(platform.x, platform.y, platform.width, platform.height)
+    platform.draw(ctx)
   })
 
-  ctx.fillStyle = 'red'
-  ctx.fillRect(player.value.x, player.value.y, player.value.width, player.value.height)
+  player.value.draw(ctx)
 
   requestAnimationFrame(() => update(ctx))
 }
