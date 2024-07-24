@@ -1,11 +1,12 @@
 <template>
   <canvas ref="gameCanvas" width="800" height="600"></canvas>
+  {{ keyStates }}
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
-interface Player {
+type Player = {
   x: number
   y: number
   width: number
@@ -17,7 +18,7 @@ interface Player {
   onPlatform: boolean
 }
 
-interface Platform {
+type Platform = {
   x: number
   y: number
   width: number
@@ -25,7 +26,7 @@ interface Platform {
 }
 
 const gameCanvas = ref<HTMLCanvasElement | null>(null)
-const player: Player = {
+const player = ref<Player>({
   x: 400,
   y: 300,
   width: 50,
@@ -35,11 +36,11 @@ const player: Player = {
   jumping: false,
   jumpDirection: 0,
   onPlatform: false,
-}
+})
 
 const platforms: Platform[] = [
   { x: 300, y: 500, width: 200, height: 20 },
-  { x: 100, y: 400, width: 200, height: 20 },
+  { x: 100, y: 400, width: 200, height: 200 },
   { x: 500, y: 300, width: 200, height: 20 },
 ]
 
@@ -56,78 +57,128 @@ const handleKeyDown = (e: KeyboardEvent) => {
 const handleKeyUp = (e: KeyboardEvent) => {
   keyStates[e.key] = false
 
-  if (e.key === ' ' && player.onPlatform) {
+  if (e.key === ' ' && player.value.onPlatform) {
     
     if (keyStates['ArrowLeft']) {
-      player.jumpDirection = -1
+      player.value.jumpDirection = -1
     } else if (keyStates['ArrowRight']) {
-      player.jumpDirection = 1
+      player.value.jumpDirection = 1
     } else {
-      player.jumpDirection = 0
+      player.value.jumpDirection = 0
     }
-    player.dy = jumpStrength
-    player.jumping = true
-    player.onPlatform = false 
+    player.value.dy = jumpStrength
+    player.value.jumping = true
+    player.value.onPlatform = false 
   }
 }
 
-const isColliding = (player: Player, platform: Platform) => {
-  return (
-    player.x < platform.x + platform.width &&
-    player.x + player.width > platform.x &&
-    player.y < platform.y + platform.height &&
-    player.y + player.height > platform.y
-  )
+type Rect = {
+  x: number
+  y: number
+  width: number
+  height: number
 }
+
+type CollisionDirection = 'left' | 'right' | 'top' | 'bottom' | 'none'
+
+const checkCollisions = <T extends Rect, U extends Rect>(a: T, b: U): { isColliding: boolean, direction: CollisionDirection } => {
+  const isColliding = (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  )
+
+  let direction: CollisionDirection = 'none'
+
+  if (isColliding) {
+    const aCenterX = a.x + a.width / 2
+    const aCenterY = a.y + a.height / 2
+    const bCenterX = b.x + b.width / 2
+    const bCenterY = b.y + b.height / 2
+
+    const dx = aCenterX - bCenterX
+    const dy = aCenterY - bCenterY
+    const overlapX = (a.width / 2 + b.width / 2) - Math.abs(dx)
+    const overlapY = (a.height / 2 + b.height / 2) - Math.abs(dy)
+
+    if (overlapX < overlapY) {
+      direction = dx > 0 ? 'left' : 'right'
+    } else {
+      direction = dy > 0 ? 'top' : 'bottom'
+    }
+  }
+
+  return { isColliding, direction }
+}
+
+
 
 const update = (ctx: CanvasRenderingContext2D) => {
   
-  player.dy += gravity
+  player.value.dy += gravity
 
   
-  if (!player.jumping && !keyStates[' ']) {
+  if (!player.value.jumping && !keyStates[' ']) {
     if (keyStates['ArrowLeft']) {
-      player.dx = -moveSpeed
+      player.value.dx = -moveSpeed
     } else if (keyStates['ArrowRight']) {
-      player.dx = moveSpeed
+      player.value.dx = moveSpeed
     } else {
-      player.dx = 0
+      player.value.dx = 0
     }
   }
 
-  if (player.jumping) {
-    player.dx = player.jumpDirection * moveSpeed
+  if (player.value.jumping) {
+    player.value.dx = player.value.jumpDirection * moveSpeed
   }
 
-  player.x += player.dx
-  player.y += player.dy
+  player.value.x += player.value.dx
+  player.value.y += player.value.dy
 
   
-  player.onPlatform = false
+  player.value.onPlatform = false
   platforms.forEach((platform) => {
-    if (isColliding(player, platform)) {
-      // add bouncing off platform x here
-      if (player.dy > 0) {
-        player.y = platform.y - player.height
-        player.dy = 0
-        player.jumping = false
-        player.onPlatform = true 
-      } else if (player.dy < 0) {
-        player.y = platform.y + platform.height
-        player.dy = 0
-      }
-      if (!player.jumping) {
-        player.dx = 0 
-      }
-    }
-  })
+  const { isColliding, direction } = checkCollisions(player.value, platform);
 
-  if (player.y + player.height > 600) {
-    player.y = 600 - player.height
-    player.dy = 0
-    player.jumping = false
-    player.onPlatform = true 
-    player.dx = 0 
+  if (isColliding) {
+    switch (direction) {
+      case 'left':
+        // Move player to the right edge of the platform and invert horizontal velocity
+        player.value.x = Math.max(platform.x + platform.width, player.value.x);
+        player.value.dx = Math.abs(player.value.dx); // Ensure velocity is positive
+        break;
+      case 'right':
+        // Move player to the left edge of the platform and invert horizontal velocity
+        player.value.x = Math.min(platform.x - player.value.width, player.value.x);
+        player.value.dx = -Math.abs(player.value.dx); // Ensure velocity is negative
+        break;
+      case 'top':
+        // Move player to the bottom edge of the platform and reset vertical velocity
+        player.value.y = Math.max(platform.y + platform.height, player.value.y);
+        player.value.dy = 0;
+        player.value.jumping = false;
+        player.value.onPlatform = true;
+        break;
+      case 'bottom':
+        // Move player to the top edge of the platform and reset vertical velocity
+        player.value.y = platform.y - player.value.height;
+        player.value.dy = 0;
+        player.value.jumping = false;
+        player.value.onPlatform = true;
+        break;
+    }
+  }
+});
+
+
+
+  if (player.value.y + player.value.height > 600) {
+    player.value.y = 600 - player.value.height
+    player.value.dy = 0
+    player.value.jumping = false
+    player.value.onPlatform = true 
+    player.value.dx = 0 
   }
 
   ctx.clearRect(0, 0, 800, 600)
@@ -138,7 +189,7 @@ const update = (ctx: CanvasRenderingContext2D) => {
   })
 
   ctx.fillStyle = 'red'
-  ctx.fillRect(player.x, player.y, player.width, player.height)
+  ctx.fillRect(player.value.x, player.value.y, player.value.width, player.value.height)
 
   requestAnimationFrame(() => update(ctx))
 }
